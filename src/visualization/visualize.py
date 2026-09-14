@@ -53,3 +53,48 @@ def plot_bar(df_outlier, x, y, title):
     plt.title(title)
     plt.show()
 
+def plot_bar_with_thredshold(df: pd.DataFrame,
+                             cat_col_name:str,
+                             target:str,
+                             title:str
+                             ):
+    df_grp_cat = (
+        df.groupby(cat_col_name)[target]
+        .value_counts()
+        .rename('count')
+        .reset_index()
+    )
+
+    df_grp_cat = df_grp_cat.sort_values([cat_col_name,target,'count'], ascending=[True,True, False])
+    plt.figure(figsize=(10,6))
+    plt.axhline(y=2000, color='red', linestyle='--', linewidth=2)
+    plt.xticks(rotation='vertical')
+    plt.title(title)
+    sns.barplot(data=df_grp_cat,x = cat_col_name,y='count',hue=target)
+    plt.show()
+
+def plot_count(df, target, xlabel, title):
+    ax = sns.countplot(df, x=target, hue=target, width=0.3 )
+    for container in ax.containers:
+        ax.bar_label(container)
+    plt.xlabel(xlabel)
+    plt.title(title)
+    plt.show()
+
+def plot_heatmap(df : pd.DataFrame, 
+                 num_cols:list[str], 
+                 target: str, 
+                 title: str):
+    num_cols_with_target = num_cols + [target]
+    ax=sns.heatmap(df[num_cols_with_target].corr(),annot=True,cmap='coolwarm',fmt='.2f')
+    ax.set_title(title,fontsize=12,fontweight='normal',pad=12)
+    plt.show()
+
+def plot_box(df: pd.DataFrame,num_cols:list[str], target):
+    # sns.set(style='whitegrid')
+    plt.figure(figsize=(20,15))
+    for col in [c for c in num_cols]:
+        plt.subplot(2, 3, num_cols.index(col) + 1)
+        sns.boxplot(x=df[target], y=df[col]).set(title=f'{target} Vs {col}',ylabel=f'{col}')
+
+    plt.show()

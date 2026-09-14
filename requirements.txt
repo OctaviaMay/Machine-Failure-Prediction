@@ -11,5 +11,6 @@ notebook
 xgboost==3.2.0
 lightgbm==4.6.0
 tabulate==0.10.0 
-streamlit
+strealit
+markdown
 
