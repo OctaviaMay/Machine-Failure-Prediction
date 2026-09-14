@@ -92,6 +92,7 @@ def split_data(df:pd.DataFrame,
     'y_train' : y_train,
     'y_test' : y_test
   }
+  # return y_train
 
 def save_splitted_test_data(X_train: pd.DataFrame,
                             X_test:pd.DataFrame,
@@ -102,3 +103,125 @@ def save_splitted_test_data(X_train: pd.DataFrame,
     y_train.to_csv(SPLITTED_DATA_PATH / "y_train.csv", index=False)
     y_test.to_csv(SPLITTED_DATA_PATH / "y_test.csv", index=False)
     print(f"Test dataset is successfully saved.")
+
+def develop_model(model : type,
+                  param_grid: dict,
+                  num_feature:list[str],
+                  cat_feature : list[str],
+                  X_train:pd.DataFrame,
+                  y_train:pd.DataFrame) -> type:
+    
+    preprocess = ColumnTransformer(
+        transformers=[
+            ('num', StandardScaler(), num_feature),
+            ('cat', OneHotEncoder(sparse_output=False,handle_unknown='ignore'), cat_feature)
+        ]
+    )
+
+    pipeline = Pipeline([
+        ('preprocess', preprocess),
+        ('classifier', model)
+    ])
+
+    # print(type(model))
+
+    # Set up GridSearchCV
+    pipeline_grid_search = GridSearchCV(
+        estimator=pipeline, 
+        param_grid=param_grid, 
+        cv=5, 
+        scoring='average_precision',
+        )
+
+    # Fit GridSearchCV-model
+    pipeline_grid_search.fit(X_train,y_train)
+
+    # Access best model and get best score
+    best_model = pipeline_grid_search.best_estimator_
+    best_params = pipeline_grid_search.best_params_
+    best_score = round(pipeline_grid_search.best_score_,3)
+   
+    return best_model , best_params, best_score
+
+def get_models(num_feature : list[str],
+               cat_feature : list[str],
+               X_train:pd.DataFrame, 
+               y_train : pd.DataFrame) -> list[dict]:
+    
+    models = []
+    # base model - XGBClassifier
+    # Control the balance of positive and negative weights, useful for unbalanced classes. A typical value to consider: sum(negative instances) / sum(positive instances)
+    ratio = (y_train == 0).sum() / (y_train == 1).sum()
+    model_xgb = xgb.XGBClassifier(
+        random_state = 42,
+        scale_pos_weight = ratio,
+        objective="binary:logistic")
+
+    param_grid = {
+      'classifier__max_depth': [3, 5, 7],
+      'classifier__learning_rate': [0.1, 0.01, 0.05],
+      'classifier__n_estimators': [50, 100, 200]
+    }
+
+    # pipeline_xgb, params_xgb, score_xgb = develop_model(model_xgb, param_grid,num_feature, cat_feature, X_train, y_train)
+    pipeline_xgb, params_xgb, score_xgb = develop_model(model= model_xgb,
+                                                        param_grid= param_grid,
+                                                        num_feature= num_feature,
+                                                        cat_feature=cat_feature,
+                                                        X_train=X_train,
+                                                        y_train=y_train)
+    model_temp = {'model': 'XGBoost', 
+                        'pipeline': pipeline_xgb, 
+                        'best_params': params_xgb, 
+                        'best_score': score_xgb}
+    models.append(model_temp)
+
+    # compare model 1 - Light GBM
+    scale_pos_weight = (y_train == 0).sum() / (y_train == 1).sum()
+    model_lgb = lgb.LGBMClassifier(
+        objective="binary",
+        scale_pos_weight=scale_pos_weight,
+        random_state=42,
+        verbose = -1
+    )
+    param_grid = {
+      'classifier__max_depth': [3, 5, 7],
+      'classifier__learning_rate' : [0.1],
+      'classifier__n_estimators': [50, 100, 200]
+    }
+    pipeline_lgb, params_lgb, score_lgb = develop_model(model= model_lgb,
+                                                        param_grid= param_grid,
+                                                        num_feature= num_feature,
+                                                        cat_feature=cat_feature,
+                                                        X_train=X_train,
+                                                        y_train=y_train)
+    model_temp = {'model': 'LightGBM', 
+                        'pipeline': pipeline_lgb, 
+                        'best_params': params_lgb, 
+                        'best_score': score_lgb}
+    models.append(model_temp)
+
+    # compare model 2 - RandomForest Classifier
+    model_rdf = RandomForestClassifier(
+                class_weight='balanced',
+                random_state=42,
+                max_depth=10,
+                n_jobs=-1
+              )
+    param_grid = {
+      'classifier__max_depth': [3, 5, 7],
+      'classifier__n_estimators': [50, 100, 200]
+    }
+    pipeline_rdf, params_rdf, score_rdf = develop_model(model= model_rdf,
+                                                        param_grid= param_grid,
+                                                        num_feature= num_feature,
+                                                        cat_feature=cat_feature,
+                                                        X_train=X_train,
+                                                        y_train=y_train)
+    model_temp = {'model': 'RandomForestClassifier', 
+                        'pipeline': pipeline_rdf, 
+                        'best_params': params_rdf, 
+                        'best_score': score_rdf}
+    models.append(model_temp)
+
+    return models
