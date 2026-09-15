@@ -98,3 +98,23 @@ def plot_box(df: pd.DataFrame,num_cols:list[str], target):
         sns.boxplot(x=df[target], y=df[col]).set(title=f'{target} Vs {col}',ylabel=f'{col}')
 
     plt.show()
+
+def plot_score_comparison_chart(model_list : list[str], pr_auc_list : list[float], cv_score_list:list[float]):
+    bar_width = 0.35
+    x = range(len(model_list))
+
+    plt.figure(figsize=(7,5))
+    rbar = plt.bar(x, pr_auc_list, width=bar_width, label='PR_AUC', color='skyblue')
+    plt.bar_label(rbar, fmt= '%.3f')
+    mbar = plt.bar([i + bar_width for i in x], cv_score_list, width=bar_width, label='CV_Score', color='orange')
+    plt.bar_label(mbar, fmt = '%.3f')
+
+    plt.xlabel('Models')
+    plt.ylabel('Score')
+    plt.title('PR AUC and Mean Average Precision Across CV Folds Comparison\n')
+    plt.xticks([i + bar_width/2 for i in x], model_list)
+    # Add a horizontal line spanning the entire plot width at y = 18
+    # plt.axhline(y=8, color='red', linestyle='--', linewidth=1.5, label='Threshold')
+    plt.ylim(0, 1.5)
+    plt.legend()
+    plt.show()
