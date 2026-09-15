@@ -6,18 +6,12 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import (
-  average_precision_score,
-  recall_score,
-  precision_score,
-  classification_report,
-  confusion_matrix, ConfusionMatrixDisplay,RocCurveDisplay,
-  PrecisionRecallDisplay)
 
 import xgboost as xgb
 import lightgbm as lgb
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
+import joblib
 
 from pathlib import Path
 
@@ -92,7 +86,7 @@ def split_data(df:pd.DataFrame,
     'y_train' : y_train,
     'y_test' : y_test
   }
-  # return y_train
+  
 
 def save_splitted_test_data(X_train: pd.DataFrame,
                             X_test:pd.DataFrame,
@@ -150,7 +144,8 @@ def get_models(num_feature : list[str],
     
     models = []
     # base model - XGBClassifier
-    # Control the balance of positive and negative weights, useful for unbalanced classes. A typical value to consider: sum(negative instances) / sum(positive instances)
+    # Control the balance of positive and negative weights, useful for unbalanced classes. 
+    # A typical value to consider: sum(negative instances) / sum(positive instances)
     ratio = (y_train == 0).sum() / (y_train == 1).sum()
     model_xgb = xgb.XGBClassifier(
         random_state = 42,
@@ -163,7 +158,6 @@ def get_models(num_feature : list[str],
       'classifier__n_estimators': [50, 100, 200]
     }
 
-    # pipeline_xgb, params_xgb, score_xgb = develop_model(model_xgb, param_grid,num_feature, cat_feature, X_train, y_train)
     pipeline_xgb, params_xgb, score_xgb = develop_model(model= model_xgb,
                                                         param_grid= param_grid,
                                                         num_feature= num_feature,
@@ -225,3 +219,10 @@ def get_models(num_feature : list[str],
     models.append(model_temp)
 
     return models
+
+def save_selected_models(model_pipelines):
+  for pipeline in model_pipelines:
+      m_pck_name = pipeline['model'] + "_pipeline.pkl"
+      joblib.dump(pipeline['pipeline'], MODELS_DIR / m_pck_name)
+
+  print('Models successfully saved.')
