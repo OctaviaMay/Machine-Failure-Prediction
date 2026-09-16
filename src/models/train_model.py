@@ -19,6 +19,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROCESSED_DATA_PATH = PROJECT_ROOT / "data" / "interim" / "interim_clean_data.csv"
 MODELS_DIR = PROJECT_ROOT / "models"
 SPLITTED_DATA_PATH = PROJECT_ROOT / "data" / "split" 
+PREDICTED_DATA_PATH = PROJECT_ROOT / "data" / "predict"
 
 def load_data():
   df = pd.read_csv(PROCESSED_DATA_PATH)
@@ -226,3 +227,13 @@ def save_selected_models(model_pipelines):
       joblib.dump(pipeline['pipeline'], MODELS_DIR / m_pck_name)
 
   print('Models successfully saved.')
+
+def save_predicted_prob_value(lst_model_result: list[dict]):
+  for result in lst_model_result:
+    file_name = result['model'].named_steps['classifier'].__class__.__name__ + "_predicted_prob.csv"
+    df = pd.DataFrame(result['y_pred'])
+    df.to_csv(PREDICTED_DATA_PATH / file_name, index=False)
+
+  print('Predicted value successfully saved.')
+    
+    
