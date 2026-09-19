@@ -230,7 +230,7 @@ def save_selected_models(model_pipelines):
 
 def save_predicted_prob_value(lst_model_result: list[dict]):
   for result in lst_model_result:
-    file_name = result['model'].named_steps['classifier'].__class__.__name__ + "_predicted_prob.csv"
+    file_name = result['model_name'] + "_predicted_prob.csv"
     df = pd.DataFrame(result['y_pred'])
     df.to_csv(PREDICTED_DATA_PATH / file_name, index=False)
 
