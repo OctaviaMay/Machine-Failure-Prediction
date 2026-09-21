@@ -4,13 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
 import os
-from sklearn.metrics import (
-  average_precision_score,
-  recall_score,
-  precision_score,
-  classification_report,
-  confusion_matrix, ConfusionMatrixDisplay,RocCurveDisplay,
-  PrecisionRecallDisplay)
 
 from pathlib import Path
 
@@ -39,12 +32,20 @@ def run_prediction(model:type,
 
     return result
 
-def get_score(y_test : pd.DataFrame,
-                   y_prob : pd.DataFrame) -> float:
 
-    pr_auc = round(average_precision_score(y_test, y_prob),3)
+def run_multiclass_prediction(model:type,
+                    X_test:pd.DataFrame)->dict:
 
-    return pr_auc
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)
+
+    result = { 
+                'y_pred': y_pred, 
+                'y_prob' : y_prob
+                }
+
+    return result
+
 
 def get_feature_importance(pipeline:type)->dict:
   
