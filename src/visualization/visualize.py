@@ -69,7 +69,7 @@ def plot_bar_with_thredshold(df: pd.DataFrame,
     )
 
     df_grp_cat = df_grp_cat.sort_values([cat_col_name,target,'count'], ascending=[True,True, False])
-    plt.figure(figsize=(10,6))
+    plt.figure(figsize=(5,4))#10, 6
     plt.axhline(y=2000, color='red', linestyle='--', linewidth=2)
     plt.xticks(rotation='vertical')
     plt.title(title)
@@ -93,14 +93,28 @@ def plot_heatmap(df : pd.DataFrame,
     ax.set_title(title,fontsize=12,fontweight='normal',pad=12)
     plt.show()
 
-def plot_box(df: pd.DataFrame,num_cols:list[str], target):
-    # sns.set(style='whitegrid')
+def plot_box(df: pd.DataFrame,num_cols:list[str], target ):
     plt.figure(figsize=(20,15))
     for col in [c for c in num_cols]:
         plt.subplot(2, 3, num_cols.index(col) + 1)
         sns.boxplot(x=df[target], y=df[col]).set(title=f'{target} Vs {col}',ylabel=f'{col}')
 
     plt.show()
+
+def plot_multi_box(df: pd.DataFrame,num_cols:list[str], target ):
+    for t in target:
+        fig, axes = plt.subplots(1, len(num_cols), figsize=(25, 5))
+
+        for i, col in enumerate(num_cols):
+            sns.boxplot(
+                x=df[t],
+                y=df[col],
+                ax=axes[i]
+            )
+            axes[i].set_title(f'{col} Vs Target {t}')
+
+        plt.tight_layout()
+        plt.show()
 
 def plot_score_comparison_chart(model_list : list[str], pr_auc_list : list[float], cv_score_list:list[float]):
     bar_width = 0.35
