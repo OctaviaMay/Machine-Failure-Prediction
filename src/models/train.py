@@ -23,18 +23,25 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROCESSED_DATA_PATH = PROJECT_ROOT / "data" / "interim" / "interim_clean_data.csv"
-SPLITTED_DATA_PATH = PROJECT_ROOT / "data" / "split" 
 
-MODELS_DIR = PROJECT_ROOT / "models"
+SPLITTED_DATA_PATH = PROJECT_ROOT / "data" / "split" / "binary"
+SPLITTED_DATA_PATH_MULTI = PROJECT_ROOT / "data" / "split" / "multi"
+
+MODELS_DIR = PROJECT_ROOT / "models" / "binary"
 MODELS_DIR_MULTI = PROJECT_ROOT / "models" / "multi"
 
-PREDICTED_DATA_PATH = PROJECT_ROOT / "data" / "predict"
+PREDICTED_DATA_PATH = PROJECT_ROOT / "data" / "predict" / "binary"
 PREDICTED_DATA_PATH_MULTI = PROJECT_ROOT / "data" / "predict" / "multi"
+
+
+SPLITTED_DATA_PATH.mkdir(exist_ok=True)
+SPLITTED_DATA_PATH_MULTI.mkdir(exist_ok=True)
 
 MODELS_DIR.mkdir(exist_ok=True)
 MODELS_DIR_MULTI.mkdir(exist_ok=True)
-SPLITTED_DATA_PATH.mkdir(exist_ok=True)
+
 PREDICTED_DATA_PATH.mkdir(exist_ok=True)
+PREDICTED_DATA_PATH_MULTI.mkdir(exist_ok=True)
 
 
 def load_data():
@@ -163,7 +170,7 @@ def split_data(df:pd.DataFrame,
 
   # Split data
   X_train, X_test, y_train, y_test = train_test_split(X, y, test_size= test_size,stratify=y, random_state=42)
-
+  
   return {
     'X_train' : X_train,
     'X_test' : X_test,
@@ -175,11 +182,20 @@ def split_data(df:pd.DataFrame,
 def save_splitted_test_data(X_train: pd.DataFrame,
                             X_test:pd.DataFrame,
                             y_train:pd.DataFrame,
-                            y_test:pd.DataFrame):
-    X_train.to_csv(SPLITTED_DATA_PATH / "X_train.csv", index = False)
-    X_test.to_csv(SPLITTED_DATA_PATH / "X_test.csv", index=False)
-    y_train.to_csv(SPLITTED_DATA_PATH / "y_train.csv", index=False)
-    y_test.to_csv(SPLITTED_DATA_PATH / "y_test.csv", index=False)
+                            y_test:pd.DataFrame,
+                            modeling_mode = ''):
+
+    if modeling_mode == '':
+      X_train.to_csv(SPLITTED_DATA_PATH / "X_train.csv", index = False)
+      X_test.to_csv(SPLITTED_DATA_PATH / "X_test.csv", index=False)
+      y_train.to_csv(SPLITTED_DATA_PATH / "y_train.csv", index=False)
+      y_test.to_csv(SPLITTED_DATA_PATH / "y_test.csv", index=False)
+    else:
+        X_train.to_csv(SPLITTED_DATA_PATH_MULTI / "X_train.csv", index = False)
+        X_test.to_csv(SPLITTED_DATA_PATH_MULTI / "X_test.csv", index=False)
+        y_train.to_csv(SPLITTED_DATA_PATH_MULTI / "y_train.csv", index=False)
+        y_test.to_csv(SPLITTED_DATA_PATH_MULTI / "y_test.csv", index=False)
+
     print(f"Test dataset is successfully saved.")
 
 
@@ -482,10 +498,12 @@ def save_predicted_prob_value(lst_model_result: list[dict], modeling_mode = ''):
 
   for result in lst_model_result:
     file_name = result['model_name'] + "_predicted_prob.csv"
-    df = pd.DataFrame(result['y_pred'])
+    
     if modeling_mode == '':
+      df = pd.DataFrame(result['y_predict_prob'])
       df.to_csv(PREDICTED_DATA_PATH / file_name, index=False)
     else:
+      df = pd.DataFrame(result['y_predict_prob'])
       df.to_csv(PREDICTED_DATA_PATH_MULTI / file_name, index=False)
 
   print('Predicted value successfully saved.')
