@@ -4,13 +4,24 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import PrecisionRecallDisplay
+from sklearn.calibration import CalibrationDisplay
 
 from pathlib import Path
 
 # Project root = two levels up from this file (src/visualization/ -> src/ -> root)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CONFUSION_MATRIX_PATH = PROJECT_ROOT / "assets"
-RESULT_EVAL_PATH = PROJECT_ROOT / "assets"
+
+CONFUSION_MATRIX_PATH = PROJECT_ROOT / "assets" / "binary"
+CONFUSION_MATRIX_PATH_MULTI = PROJECT_ROOT / "assets" / "multi"
+
+RESULT_EVAL_PATH = PROJECT_ROOT / "assets" / "binary"
+RESULT_EVAL_PATH_MULTI = PROJECT_ROOT / "assets" / "multi"
+
+CONFUSION_MATRIX_PATH.mkdir(exist_ok=True)
+CONFUSION_MATRIX_PATH_MULTI.mkdir(exist_ok=True)
+
+RESULT_EVAL_PATH.mkdir(exist_ok=True)
+RESULT_EVAL_PATH_MULTI.mkdir(exist_ok=True)
 
 # -----------------------------
 # Global styling
@@ -137,16 +148,23 @@ def plot_score_comparison_chart(model_list : list[str], pr_auc_list : list[float
     plt.show()
 
 def plot_confusion_matrix(confusion_matrix:type,
-                          model_name:str):
+                          model_name:str,
+                          modeling_mode = ''):
 
     confusion_matrix.plot(cmap=plt.cm.Blues)
+    if modeling_mode == '':
+        file_name = f"{CONFUSION_MATRIX_PATH}\\ConfusionMatrix_{model_name}"
+    else:
+        file_name = f"{CONFUSION_MATRIX_PATH_MULTI}\\ConfusionMatrix_{model_name}"
 
-    file_name = f"{CONFUSION_MATRIX_PATH}\\ConfusionMatrix_{model_name}"
     plt.savefig(file_name,dpi=1500,bbox_inches='tight')
     plt.show()
 
 
-def plot_eval_comparison_chart(model_list:list[str],precision_list:list[float],recall_list:list[float]):
+def plot_eval_comparison_chart(model_list:list[str],
+                               precision_list:list[float],
+                               recall_list:list[float],
+                               modeling_mode = ''):
     bar_width = 0.35
     x = range(len(model_list))
 
@@ -164,7 +182,11 @@ def plot_eval_comparison_chart(model_list:list[str],precision_list:list[float],r
     plt.legend()
 
     # Save result plot
-    file_name = f"{RESULT_EVAL_PATH}\\results_comparison"
+    if modeling_mode == '':
+        file_name = f"{RESULT_EVAL_PATH}\\results_comparison"
+    else:
+        file_name = f"{RESULT_EVAL_PATH_MULTI}\\results_comparison"
+
     plt.savefig(file_name,dpi=150,bbox_inches='tight')
 
     plt.show()
@@ -172,32 +194,38 @@ def plot_eval_comparison_chart(model_list:list[str],precision_list:list[float],r
 def plot_pre_recall_curve(pipeline_xgb : type,
                           pipeline_lgb : type,
                           X_test : pd.DataFrame,
-                          y_test : pd.DataFrame):
+                          y_test : pd.DataFrame,
+                          modeling_mode = ''):
+    
     fig, ax = plt.subplots(figsize=(8, 6))
 
     # Plot for XGBoost
-    disp_xgb = PrecisionRecallDisplay.from_estimator(
+    PrecisionRecallDisplay.from_estimator(
         pipeline_xgb,
         X_test,
         y_test,
-        name="XGBoost",
-        color="darkorange",
+        curve_kwargs = {'color':"darkorange",'linestyle':'--', 'name' : pipeline_xgb.named_steps['classifier'].__class__.__name__},
         ax=ax
     )
 
     # Plot for LightGBM
-    disp_lgb = PrecisionRecallDisplay.from_estimator(
+    PrecisionRecallDisplay.from_estimator(
         pipeline_lgb,
         X_test,
         y_test,
-        name="LightGBM",
-        color="skyblue",
+        curve_kwargs = {'color':"skyblue",'linestyle':'--', 'name':pipeline_lgb.named_steps['classifier'].__class__.__name__},
         ax=ax
     )
 
     ax.set_title("Precision-Recall Curve Comparison")
     ax.legend()
 
-    file_name = f"{RESULT_EVAL_PATH}//precision_recall_curge"
+    if modeling_mode == "":
+        file_name = f"{RESULT_EVAL_PATH}//precision_recall_curge"
+    else:
+        file_name = f"{RESULT_EVAL_PATH_MULTI}//precision_recall_curge"
+
     plt.savefig(file_name,bbox_inches='tight',dpi=1500)
     plt.show()
+
+
