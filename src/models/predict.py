@@ -41,6 +41,7 @@ def run_prediction(model:type,
     y_predict_prob = model.predict_proba(X_test)[:,1]
 
     result = { 
+                'y_predict_value' : y_pred,
                 'y_predict_prob' : y_predict_prob
                 }
 
