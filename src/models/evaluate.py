@@ -14,6 +14,11 @@ from sklearn.metrics import (
   confusion_matrix, ConfusionMatrixDisplay
   )
 
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+BEST_MODEL_DIR = PROJECT_ROOT / "app" / "backend"
 
 def evaluate_at_threshold(predefined_threshold:float,
                          y_test:pd.DataFrame,
@@ -122,3 +127,18 @@ def evaluate_at_threshold_multiclass(y_proba_binary:pd.DataFrame,
                 'confusion_matrix' : cm,
                 'confusion_matrix_display' : cm_disp
                 }
+
+
+
+def save_best_model(best_model: type, modeling_mode = ''):
+
+    model_name = best_model.named_steps['classifier'].__class__.__name__
+
+    if modeling_mode == '':
+        m_pck_name = model_name + "_binary.pkl"
+    else:
+        m_pck_name = model_name + "_multi.pkl"
+
+    joblib.dump(best_model, BEST_MODEL_DIR / m_pck_name)
+
+    print('Models successfully saved.')

@@ -497,12 +497,18 @@ def save_selected_models(model_pipelines, modeling_mode = ''):
 def save_predicted_prob_value(lst_model_result: list[dict], modeling_mode = ''):
 
   for result in lst_model_result:
-    file_name = result['model_name'] + "_predicted_prob.csv"
     
-    if modeling_mode == '':
-      df = pd.DataFrame(result['y_predict_prob'])
-      df.to_csv(PREDICTED_DATA_PATH / file_name, index=False)
+    if modeling_mode == '': 
+      # for binary classification, predicted value and predicted probability will be saved.
+      file_name_pv = result['model_name'] + "_predicted_value.csv"
+      df_pv = pd.DataFrame(result['y_predict_value'])
+      df_pv.to_csv(PREDICTED_DATA_PATH / file_name_pv, index=False)
+
+      file_name_pb = result['model_name'] + "_predicted_prob.csv"
+      df_pb = pd.DataFrame(result['y_predict_prob'])
+      df_pb.to_csv(PREDICTED_DATA_PATH / file_name_pb, index=False)
     else:
+      file_name = result['model_name'] + "_predicted_prob.csv"
       df = pd.DataFrame(result['y_predict_prob'])
       df.to_csv(PREDICTED_DATA_PATH_MULTI / file_name, index=False)
 
