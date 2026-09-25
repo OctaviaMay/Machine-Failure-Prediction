@@ -53,6 +53,33 @@ def plot_mul_histogram(num_cols,df,color_p):
     plt.show()
 
 
+
+def plot_mul_count(df,target):
+    for t in target:
+        plt.subplot(2,3,target.index(t)+1)
+        sns.countplot(data=df, x=t, width=0.3)
+        plt.xlabel(f"Target Class - {t}")
+        plt.ylabel("Count")
+        plt.title(f"Distribution of {t}")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_mul_heatmap(df : pd.DataFrame, 
+                 num_cols:list[str], 
+                 target: str, 
+                 title: str):
+    for t in target:
+        plt.subplot(2,3,target.index(t) + 1)
+        num_cols_with_target = num_cols + [t]
+        sns.heatmap(df[num_cols_with_target].corr(),annot=True,cmap='coolwarm',fmt='.2f')
+        plt.title(f"{title} {t}")
+        
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_bar(df_outlier, x, y, title):
     plt.figure(figsize=(8,6))
     sns.barplot(
@@ -66,6 +93,7 @@ def plot_bar(df_outlier, x, y, title):
 
     plt.title(title)
     plt.show()
+
 
 def plot_bar_with_thredshold(df: pd.DataFrame,
                              cat_col_name:str,
@@ -86,6 +114,31 @@ def plot_bar_with_thredshold(df: pd.DataFrame,
     plt.title(title)
     sns.barplot(data=df_grp_cat,x = cat_col_name,y='count',hue=target)
     plt.show()
+
+
+def plot_mul_bar_with_thredshold(df: pd.DataFrame,
+                             cat_col_name:str,
+                             target:str,
+                             title:str):
+    
+    for t in target:
+        plt.subplot(2,3,target.index(t) + 1)
+        df_grp_cat = (
+                df.groupby(cat_col_name)[t]
+                .value_counts()
+                .rename('count')
+                .reset_index()
+            )
+        df_grp_cat = df_grp_cat.sort_values([cat_col_name,t,'count'], ascending=[True,True, False])
+        plt.axhline(y=2000, color='red', linestyle='--', linewidth=2)
+        plt.xticks(rotation='vertical')
+        plt.title(f"{title} {t}")
+        sns.barplot(data=df_grp_cat,x = cat_col_name,y='count',hue=t)
+
+    plt.tight_layout()
+    plt.show()
+
+    
 
 def plot_count(df, target, xlabel, title):
     ax = sns.countplot(df, x=target, hue=target, width=0.3 )
