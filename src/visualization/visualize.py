@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import PrecisionRecallDisplay
 from sklearn.calibration import CalibrationDisplay
+from sklearn.metrics import classification_report, ConfusionMatrixDisplay
 
 from pathlib import Path
 
@@ -201,27 +202,51 @@ def plot_score_comparison_chart(model_list : list[str], pr_auc_list : list[float
     plt.show()
 
 def plot_confusion_matrix(confusion_matrix:type,
-                          model_name:str,
-                          modeling_mode = ''):
+                          model_name:str):
 
     confusion_matrix.plot(cmap=plt.cm.Blues)
-    if modeling_mode == '':
-        file_name = f"{CONFUSION_MATRIX_PATH}\\ConfusionMatrix_{model_name}"
-    else:
-        file_name = f"{CONFUSION_MATRIX_PATH_MULTI}\\ConfusionMatrix_{model_name}"
-
+    file_name = f"{CONFUSION_MATRIX_PATH}\\ConfusionMatrix_{model_name}"
     plt.savefig(file_name,dpi=1500,bbox_inches='tight')
     plt.show()
 
 
+def plot_confusion_matrix_multiclass(target:list[str],
+                                     y_test:pd.DataFrame,
+                                     y_prob:pd.DataFrame,
+                                     threshold:float,
+                                     model_name:str):
+
+    # names = ['None', 'TWF', 'HDF', 'PWF', 'OSF', 'RNF']
+    y_true = y_test.iloc[:, 0].astype(int).values
+    P = y_prob.values                           # shape (n, 6)
+
+    is_fail = (1 - P[:, 0]) >= threshold
+    y_pred = np.where(is_fail, P[:, 1:].argmax(axis=1) + 1, 0)
+
+    print(classification_report(y_true, y_pred, labels=range(1, 6),
+                                target_names=target[1:], zero_division=0, digits=3))
+
+    caught = (y_true > 0) & is_fail
+    print(f"Correct mode among caught failures: {(y_pred[caught] == y_true[caught]).mean():.0%}")
+
+    ConfusionMatrixDisplay.from_predictions(y_true, y_pred, labels=range(6),
+                                            display_labels=target, cmap='Blues')
+    plt.title(f"Model {model_name}: Failure Mode Confusion Matrix")
+    
+    file_name = f"{CONFUSION_MATRIX_PATH_MULTI}\\FailureModeConfusionMatrix_{model_name}"
+    plt.savefig(file_name,dpi=1500,bbox_inches='tight')
+    plt.show()
+
+
+### binary & multi
 def plot_eval_comparison_chart(model_list:list[str],
                                precision_list:list[float],
                                recall_list:list[float],
                                modeling_mode = ''):
-    bar_width = 0.35
+    bar_width = 0.3
     x = range(len(model_list))
 
-    plt.figure(figsize=(7,5))
+    plt.figure(figsize=(8,6))
     pbar = plt.bar(x, precision_list, width=bar_width, label='Precision', color='skyblue')
     plt.bar_label(pbar, fmt= '%.3f')
     rbar = plt.bar([i + bar_width for i in x], recall_list, width=bar_width, label='Recall', color='lightgreen')
@@ -232,6 +257,8 @@ def plot_eval_comparison_chart(model_list:list[str],
     plt.title('Precision and Recall Comparison\n')
     plt.xticks([i + bar_width/2 for i in x], model_list)
     plt.ylim(0, 1)
+    plt.axhline(0.7, ls='--', c='red', lw=1.5, label='Recall target (0.7)')
+    plt.legend()
     plt.legend()
 
     # Save result plot
@@ -243,6 +270,7 @@ def plot_eval_comparison_chart(model_list:list[str],
     plt.savefig(file_name,dpi=150,bbox_inches='tight')
 
     plt.show()
+
 
 def plot_pre_recall_curve(pipeline_xgb : type,
                           pipeline_lgb : type,
@@ -274,9 +302,9 @@ def plot_pre_recall_curve(pipeline_xgb : type,
     ax.legend()
 
     if modeling_mode == "":
-        file_name = f"{RESULT_EVAL_PATH}//precision_recall_curge"
+        file_name = f"{RESULT_EVAL_PATH}//precision_recall_curve"
     else:
-        file_name = f"{RESULT_EVAL_PATH_MULTI}//precision_recall_curge"
+        file_name = f"{RESULT_EVAL_PATH_MULTI}//precision_recall_curve"
 
     plt.savefig(file_name,bbox_inches='tight',dpi=1500)
     plt.show()
