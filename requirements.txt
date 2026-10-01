@@ -16,4 +16,5 @@ markdown
 fastapi[standard]
 uvicorn[standard]
 requests
+python-dotenv
 
