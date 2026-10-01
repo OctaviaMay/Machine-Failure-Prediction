@@ -5,13 +5,16 @@ Suggested location: app_v2/frontend/app.py
 Run:  streamlit run app_v2/frontend/app.py
 """
 import os
+from dotenv import load_dotenv
 
 import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
 
+load_dotenv()
 API_URL = os.getenv("API_URL", "http://localhost:8000")
+
 TIMEOUT = 15
 
 st.set_page_config(page_title="Predictive Maintenance", page_icon="⚙️", layout="wide")
