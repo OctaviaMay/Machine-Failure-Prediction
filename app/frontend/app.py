@@ -1,8 +1,5 @@
 """
 Streamlit frontend for the Machine-Failure Prediction API (binary + multi-class).
-
-Suggested location: app_v2/frontend/app.py
-Run:  streamlit run app_v2/frontend/app.py
 """
 import os
 from dotenv import load_dotenv
@@ -17,7 +14,7 @@ API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 TIMEOUT = 15
 
-st.set_page_config(page_title="Predictive Maintenance", page_icon="⚙️", layout="wide")
+st.set_page_config(page_title="Predicting Machine Failures", page_icon="⚙️", layout="wide")
 
 # CSV column name -> API field name (accepts raw AI4I headers or API names)
 CSV_TO_API = {
@@ -189,8 +186,8 @@ with st.sidebar:
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
-st.title("⚙️ Predictive Maintenance")
-tab_single, tab_batch = st.tabs(["Single prediction", "Batch (CSV)"])
+st.title("⚙️ Predicting Machine Failures")
+tab_single = st.tabs(["Single prediction"])[0]
 
 # ---- Single ----------------------------------------------------------------
 with tab_single:
@@ -236,68 +233,3 @@ with tab_single:
             st.dataframe(pd.DataFrame([last["payload"]]), width="stretch", hide_index=True)
         with st.expander("Raw API response"):
             st.json(last["result"])
-
-# ---- Batch -----------------------------------------------------------------
-with tab_batch:
-    batch_mode = "binary" if mode == "binary" else "multiclass"
-    if mode == "combined":
-        st.caption("Batch runs one model at a time — using **multiclass** (it also returns P(any failure)).")
-
-    file = st.file_uploader("Upload CSV (AI4I column names or API field names)", type="csv")
-    if file is not None:
-        raw = pd.read_csv(file)
-        df = raw.rename(columns=CSV_TO_API)
-        missing = [c for c in API_FIELDS if c not in df.columns]
-        if missing:
-            st.error(f"Missing columns: {missing}")
-        else:
-            st.write(f"{len(df):,} rows loaded")
-            if st.button(f"Run {batch_mode} batch prediction", type="primary"):
-                try:
-                    records = df[API_FIELDS].to_dict(orient="records")
-                    with st.spinner("Predicting..."):
-                        res = call_api("POST", f"/predict/{batch_mode}/batch", json={"records": records})
-                    preds = pd.DataFrame(
-                        [
-                            {
-                                "pred_class": p["class_id"],
-                                "pred_code": p["code"],
-                                "pred_name": p["name"],
-                                "is_failure": p["is_failure"],
-                                "failure_probability": round(p["failure_probability"], 4),
-                                "confidence": round(p["confidence"], 4),
-                                "warnings": " | ".join(p["warnings"]),
-                            }
-                            for p in res["predictions"]
-                        ]
-                    )
-                    st.session_state["batch"] = pd.concat([raw.reset_index(drop=True), preds], axis=1)
-                except APIError as e:
-                    st.error(str(e))
-
-    out = st.session_state.get("batch")
-    if out is not None:
-        k1, k2, k3 = st.columns(3)
-        k1.metric("Rows", f"{len(out):,}")
-        k2.metric("Predicted failures", int(out["is_failure"].sum()))
-        k3.metric("Mean P(failure)", f"{out['failure_probability'].mean():.1%}")
-        if out["is_failure"].any():
-            st.bar_chart(out.loc[out["is_failure"], "pred_code"].value_counts())
-        only_fail = st.toggle("Show predicted failures only")
-        view = out[out["is_failure"]] if only_fail else out
-        st.dataframe(
-            view.sort_values("failure_probability", ascending=False),
-            width="stretch",
-            hide_index=True,
-            column_config={
-                "failure_probability": st.column_config.ProgressColumn(
-                    "P(failure)", min_value=0.0, max_value=1.0, format="%.2f"
-                )
-            },
-        )
-        st.download_button(
-            "Download predictions CSV",
-            out.to_csv(index=False).encode(),
-            "predictions.csv",
-            "text/csv",
-        )
