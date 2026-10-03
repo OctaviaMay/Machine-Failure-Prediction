@@ -1,12 +1,10 @@
 """
 Machine-Failure Prediction API — binary + multi-class serving.
-
-Suggested location: app_v2/backend/main.py
-Run:  uvicorn app_v2.backend.main:app --reload --port 8000   (from project root)
 """
 from __future__ import annotations
 
 import os
+from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
@@ -29,12 +27,13 @@ BINARY_MODEL_PATH = Path(
 MULTI_MODEL_PATH = Path(
     os.getenv("MULTI_MODEL_PATH", PROJECT_ROOT / "models" / "multi" / "LightGBM_pipeline.pkl")
 )
-# Tune this from your PR curve instead of assuming 0.5 on an imbalanced dataset.
-BINARY_THRESHOLD = float(os.getenv("BINARY_THRESHOLD", "0.5"))
-# Multi-class: flag failure when P(any failure) = 1 - P(No Failure) >= this, then
-# report the most likely *failure* class. Plain argmax lets "No Failure" win with
-# e.g. 40% while failure modes split the remaining 60%.
-MULTI_FAILURE_THRESHOLD = float(os.getenv("MULTI_FAILURE_THRESHOLD", "0.5"))
+
+load_dotenv()
+BINARY_THRESHOLD = float(os.getenv("BINARY_THRESHOLD", "0.7"))
+
+# Multi-class: flag failure when P(any failure) = 1 - P(No Failure) >= this, 
+# then report the most likely *failure* class. 
+MULTI_FAILURE_THRESHOLD = float(os.getenv("MULTI_FAILURE_THRESHOLD", "0.7"))
 
 # Column order used at training time (matches data/split/*/X_*.csv)
 FEATURE_COLUMNS = [
@@ -86,7 +85,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Machine-Failure Prediction API",
     description="Binary (failure / no failure) and multi-class (failure mode) predictions.",
-    version="2.0.0",
+    version="1.0.2",
     lifespan=lifespan,
 )
 
@@ -194,17 +193,17 @@ def input_warnings(r: PredictionInput) -> list[str]:
     if r.process_temperature_k < r.air_temperature_k:
         w.append("Process temperature is below air temperature (unusual for this dataset).")
     if not 1150 <= r.rotational_speed_rpm <= 2900:
-        w.append("Rotational speed is outside the training range (~1168–2886 rpm).")
+        w.append("Rotational speed is outside the training range (~1168 - 2886 rpm).")
     if r.torque_nm > 80:
-        w.append("Torque is outside the training range (~3.8–76.6 Nm).")
+        w.append("Torque is outside the training range (~3.8 - 76.6 Nm).")
     if r.tool_wear_min > 260:
-        w.append("Tool wear is outside the training range (0–253 min).")
+        w.append("Tool wear is outside the training range (0 - 253 min).")
     return w
 
 
 def build_binary(proba_row: np.ndarray, classes, name: str, rec: PredictionInput) -> PredictionOutput:
     cls = [str(c) for c in classes]
-    p_fail = float(proba_row[cls.index("1")])
+    p_fail = float(proba_row[cls.index("1")]) 
     pred = "1" if p_fail >= BINARY_THRESHOLD else "0"
     probs = sorted(
         (
@@ -288,7 +287,7 @@ def build_multi(proba_row: np.ndarray, classes, name: str, rec: PredictionInput)
 BUILDERS = {Mode.binary: build_binary, Mode.multiclass: build_multi}
 
 
-def run(request: Request, mode: Mode, records: list[PredictionInput]) -> list[PredictionOutput]:
+def run_prediction(request: Request, mode: Mode, records: list[PredictionInput]) -> list[PredictionOutput]:
     model = get_model(request, mode)
     try:
         proba = model.predict_proba(to_frame(records))
@@ -318,23 +317,23 @@ def health(request: Request):
 
 @app.get("/metadata")
 def metadata(request: Request):
-    """Frontend reads labels/threshold from here instead of hard-coding them."""
-    out: dict[str, Any] = {"features": FEATURE_COLUMNS, "modes": {}}
+    
+    metadata_out: dict[str, Any] = {"features": FEATURE_COLUMNS, "modes": {}}
     for mode, model in request.app.state.models.items():
-        out["modes"][mode.value] = {
+        metadata_out["modes"][mode.value] = {
             "model_name": model_name(model),
             "classes": [str(c) for c in model.classes_],
             "labels": BINARY_LABELS if mode == Mode.binary else MULTI_LABELS,
             "threshold": BINARY_THRESHOLD if mode == Mode.binary else MULTI_FAILURE_THRESHOLD,
         }
-    return out
+    return metadata_out
 
 
 # Declared before /predict/{mode} so "combined" isn't parsed as a Mode.
 @app.post("/predict/combined", response_model=CombinedOutput)
 def predict_combined(payload: PredictionInput, request: Request):
-    b = run(request, Mode.binary, [payload])[0]
-    m = run(request, Mode.multiclass, [payload])[0]
+    b = run_prediction(request, Mode.binary, [payload])[0]
+    m = run_prediction(request, Mode.multiclass, [payload])[0]
     agreement = b.is_failure == m.is_failure
     if b.is_failure and m.is_failure:
         summary = f"Failure risk detected — most likely mode: {m.code} ({m.name})."
@@ -350,12 +349,7 @@ def predict_combined(payload: PredictionInput, request: Request):
     return CombinedOutput(binary=b, multiclass=m, agreement=agreement, summary=summary)
 
 
+# Single prediction mode whether binary or multi
 @app.post("/predict/{mode}", response_model=PredictionOutput)
 def predict(mode: Mode, payload: PredictionInput, request: Request):
-    return run(request, mode, [payload])[0]
-
-
-@app.post("/predict/{mode}/batch", response_model=BatchOutput)
-def predict_batch(mode: Mode, payload: BatchInput, request: Request):
-    preds = run(request, mode, payload.records)
-    return BatchOutput(mode=mode, count=len(preds), predictions=preds)
+    return run_prediction(request, mode, [payload])[0]
